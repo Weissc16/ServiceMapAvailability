@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Availability Map</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCMX01freozHooYMMF0ojX6UtpX-QDV1bA"></script>
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Service Availability Map</h1>
+    <div id="map"></div>
+    <input type="text" id="address" placeholder="Enter your address or zip code">
+    <button onclick="checkService()">Check Service Availability</button>
+    <p id="result"></p>
+
+    <script>
+        let map;
+        let selectedPolygon;
+    
+        const serviceAreas = [
+            { id: 1, name: "Area 1", coords: [{ lat: 39.5, lng: -97 }, { lat: 40, lng: -97 }, { lat: 40, lng: -96.5 }, { lat: 39.5, lng: -96.5 }] },
+            { id: 2, name: "Area 2", coords: [{ lat: 38.5, lng: -98 }, { lat: 39, lng: -98 }, { lat: 39, lng: -97.5 }, { lat: 38.5, lng: -97.5 }] }
+        ];
+    
+        const mapStyles = [ // Place the styles here (before or inside initMap)
+            {
+                featureType: "water",
+                elementType: "geometry",
+                stylers: [{ color: "#0000FF" }], // Fixed: Corrected color format
+            },
+            {
+                featureType: "landscape",
+                elementType: "geometry",
+                stylers: [{ color: "#f7f1e3" }],
+            },
+            {
+                featureType: "road",
+                elementType: "geometry",
+                stylers: [{ color: "#ff6b6b" }],
+            },
+        ];
+    
+        function highlightArea(polygon, areaName) {
+            if (selectedPolygon) {
+                selectedPolygon.setOptions({ fillColor: "#FF0000" });
+            }
+            polygon.setOptions({ fillColor: "#00FF00" });
+            selectedPolygon = polygon;
+            document.getElementById("result").innerText = `Selected Area: ${areaName} has service.`;
+        }
+    
+        function initMap() {
+            // Use the mapStyles variable here
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 39.8283, lng: -98.5795 },
+                zoom: 5,
+                styles: mapStyles, // Apply the styles
+            });
+    
+            serviceAreas.forEach(area => {
+                const polygon = new google.maps.Polygon({
+                    paths: area.coords,
+                    strokeColor: "#FF0000",
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: "#FF0000",
+                    fillOpacity: 0.35,
+                });
+    
+                polygon.setMap(map);
+    
+                polygon.addListener("click", () => highlightArea(polygon, area.name));
+            });
+        }
+    
+        // Initialize the map when the page loads
+        window.onload = initMap;
+    </script>
+    
+</body>
+</html>
