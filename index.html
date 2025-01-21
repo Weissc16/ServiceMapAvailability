@@ -5,83 +5,169 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Service Availability Map</title>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCMX01freozHooYMMF0ojX6UtpX-QDV1bA"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+            color: #333;
+        }
+        header {
+            background-color: #003366;
+            color: white;
+            text-align: center;
+            padding: 20px 10px;
+        }
+        header img {
+            max-width: 200px;
+        }
+        h1 {
+            margin: 20px 0;
+            color: #003366;
+            text-align: center;
+        }
         #map {
             height: 500px;
             width: 100%;
+            margin: 20px auto;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+        #result {
+            text-align: center;
+            font-size: 1.2em;
+            margin-top: 10px;
+            color: #007BFF;
+        }
+        button {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        footer {
+            background-color: #003366;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
+    <header>
+        <img src="img/fastbridge_logo.png" alt="FastBridge Fiber Logo">
+    </header>
+
     <h1>Service Availability Map</h1>
+
     <div id="map"></div>
-    <input type="text" id="address" placeholder="Enter your address or zip code">
-    <button onclick="checkService()">Check Service Availability</button>
     <p id="result"></p>
+    <button onclick="updateServiceStatus()">Update Service Status</button>
+
+    <footer>
+        <p>&copy; 2025 FastBridge Fiber. All rights reserved.</p>
+    </footer>
 
     <script>
         let map;
-        let selectedPolygon;
-    
-        const serviceAreas = [
-            { id: 1, name: "Area 1", coords: [{ lat: 39.5, lng: -97 }, { lat: 40, lng: -97 }, { lat: 40, lng: -96.5 }, { lat: 39.5, lng: -96.5 }] },
-            { id: 2, name: "Area 2", coords: [{ lat: 38.5, lng: -98 }, { lat: 39, lng: -98 }, { lat: 39, lng: -97.5 }, { lat: 38.5, lng: -97.5 }] }
+        const circles = []; // Array to store circle objects for later updates
+
+        // Locations with Latitude, Longitude, Service Status, and Notes
+        const locations = [
+            { name: "Central Wyomissing, PA", lat: 40.3298, lng: -75.9658, hasService: false, notes: "Service is out due to maintenance work in the area." },
+            { name: "Reading, PA", lat: 40.3356, lng: -75.9269, hasService: true, notes: "" },
+            { name: "Shillington, PA", lat: 40.3034, lng: -75.9669, hasService: true, notes: "" },
+            { name: "Sinking Spring, PA", lat: 40.3273, lng: -76.0066, hasService: true, notes: "" },
+            { name: "Kenhorst, PA", lat: 40.3115, lng: -75.9433, hasService: true, notes: "" },
+            { name: "Mohnton, PA", lat: 40.2873, lng: -75.9849, hasService: false, notes: "A fiber line was damaged in this area. Repairs are ongoing." },
+            { name: "Temple, PA", lat: 40.4073, lng: -75.9224, hasService: true, notes: "" },
+            { name: "Mount Penn, PA", lat: 40.3312, lng: -75.8919, hasService: false, notes: "Heavy storms have caused temporary outages in this area." },
         ];
-    
-        const mapStyles = [ // Place the styles here (before or inside initMap)
-            {
-                featureType: "water",
-                elementType: "geometry",
-                stylers: [{ color: "#0000FF" }], // Fixed: Corrected color format
-            },
-            {
-                featureType: "landscape",
-                elementType: "geometry",
-                stylers: [{ color: "#f7f1e3" }],
-            },
-            {
-                featureType: "road",
-                elementType: "geometry",
-                stylers: [{ color: "#ff6b6b" }],
-            },
-        ];
-    
-        function highlightArea(polygon, areaName) {
-            if (selectedPolygon) {
-                selectedPolygon.setOptions({ fillColor: "#FF0000" });
-            }
-            polygon.setOptions({ fillColor: "#00FF00" });
-            selectedPolygon = polygon;
-            document.getElementById("result").innerText = `Selected Area: ${areaName} has service.`;
-        }
-    
+
         function initMap() {
-            // Use the mapStyles variable here
+            // Custom map styles
+            const mapStyles = [
+                {
+                    "featureType": "water",
+                    "stylers": [{ "color": "#b4d4e1" }]
+                },
+                {
+                    "featureType": "road",
+                    "stylers": [{ "lightness": 45 }]
+                },
+                {
+                    "featureType": "landscape",
+                    "stylers": [{ "color": "#f7f7f7" }]
+                }
+            ];
+
+            // Initialize the map centered on Wyomissing, PA
             map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 39.8283, lng: -98.5795 },
-                zoom: 5,
-                styles: mapStyles, // Apply the styles
+                center: { lat: 40.3372, lng: -75.9758 },
+                zoom: 12,
+                styles: mapStyles,
             });
-    
-            serviceAreas.forEach(area => {
-                const polygon = new google.maps.Polygon({
-                    paths: area.coords,
-                    strokeColor: "#FF0000",
+
+            // Loop through locations and add circles
+            locations.forEach(location => {
+                const circleColor = location.hasService ? "#00FF00" : "#FF0000"; // Green for service, Red for no service
+
+                const circle = new google.maps.Circle({
+                    strokeColor: circleColor,
                     strokeOpacity: 0.8,
                     strokeWeight: 2,
-                    fillColor: "#FF0000",
+                    fillColor: circleColor,
                     fillOpacity: 0.35,
+                    map,
+                    center: { lat: location.lat, lng: location.lng },
+                    radius: 1500,
                 });
-    
-                polygon.setMap(map);
-    
-                polygon.addListener("click", () => highlightArea(polygon, area.name));
+
+                circles.push(circle);
+
+                const infoWindowContent = `
+                    <h3>${location.name}</h3>
+                    <p>${location.hasService ? "Service is available!" : "No service available."}</p>
+                    ${!location.hasService && location.notes ? `<p><strong>Reason:</strong> ${location.notes}</p>` : ""}
+                `;
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: infoWindowContent,
+                });
+
+                circle.addListener("click", () => {
+                    infoWindow.setPosition(circle.getCenter());
+                    infoWindow.open(map);
+                });
             });
         }
-    
-        // Initialize the map when the page loads
+
+        function updateServiceStatus() {
+            // Simulate a service status update
+            locations.forEach((location, index) => {
+                // Update the circle color based on the new `hasService` value
+                const circleColor = location.hasService ? "#00FF00" : "#FF0000";
+                circles[index].setOptions({
+                    strokeColor: circleColor,
+                    fillColor: circleColor,
+                });
+            });
+
+            document.getElementById("result").innerText = "Service statuses updated!";
+        }
+
         window.onload = initMap;
     </script>
-    
 </body>
 </html>
